@@ -95,9 +95,6 @@ void ModuleWatchdogConnection::sendShutdownRequest() {
     shutdownMessage.header.operationCode = WatchdogModule::Operation::ShutdownRequest;
     shutdownMessage.header.size = shutdownMessage.body.size();
 
-    WatchdogModule::ShutdownRequestData shutdownRequestDataRe{};
-    shutdownRequestDataRe.ParseFromString(shutdownMessage.body);
-    Log::trace("Sending: " + std::to_string(shutdownRequestDataRe.identifier()));
     this->sendMessage(shutdownMessage);
 }
 

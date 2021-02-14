@@ -16,8 +16,6 @@ find_package(bsoncxx REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(Catch2 REQUIRED)
 
-link_libraries(${Boost_LIBRARIES})
-
 set(MongoCxxIncludes    /usr/local/include/mongocxx/v_noabi
                         /usr/local/include/bsoncxx/v_noabi)
 
