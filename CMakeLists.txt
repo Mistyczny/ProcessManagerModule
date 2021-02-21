@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-project(ProcessManager)
+project(ProcessManagerModule)
 enable_testing()
 
 SET(CMAKE_CXX_STANDARD 20)
 
+find_package(Boost 1.71.0 COMPONENTS system filesystem log REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(Catch2 REQUIRED)

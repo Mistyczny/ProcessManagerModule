@@ -14,7 +14,9 @@ ModuleBase::ModuleBase(int argc, char* argv[])
     : ioContext{}, m_worker{boost::asio::make_work_guard(ioContext)}, connection{std::make_shared<ModuleWatchdogConnection>(
                                                                           ioContext, watchdogConnectionState)},
       ioContextWorkThread{[](boost::asio::io_context& ioContext) { ioContext.run(); }, std::ref(ioContext)},
-      watchdogConnectionWatcherThread{WatchdogConnectionWatcher(), this->connection, std::ref(watchdogConnectionState)} {}
+      watchdogConnectionWatcherThread{WatchdogConnectionWatcher(), this->connection, std::ref(watchdogConnectionState)} {
+    server = std::make_shared<Server>(ioContext, servicesEndpointsMap, timersCache);
+}
 
 ModuleBase::~ModuleBase() {
     Log::info("Destroying ModuleBase");
