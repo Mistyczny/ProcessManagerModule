@@ -10,35 +10,51 @@
 #include <map>
 #include <memory>
 
+struct Destination {
+    Types::ServiceIdentifier serviceIdentifier;
+    boost::asio::ip::udp::endpoint endpoint;
+    bool operator==(const Destination& other) const {
+        return this->serviceIdentifier == other.serviceIdentifier && this->endpoint == other.endpoint;
+    }
+};
+
 struct ParkedMessage {
     uint32_t transactionCode;
-    uint32_t timerID;
-    boost::asio::ip::udp::endpoint destination;
-    std::string message;
+    Destination destination;
+    ServiceModule::Message message;
 };
 
 namespace Module {
 
-typedef std::pair<boost::asio::ip::udp::endpoint, std::string> MessageType;
+typedef std::pair<Destination, ServiceModule::Message> MessageType;
 
 class Server : public std::enable_shared_from_this<Server> {
-private:
+protected:
     boost::asio::io_context& ioContext;
     std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>& servicesEndpointsMap;
-    std::list<ParkedMessage> parkedMessages;
-    std::map<uint32_t, uint32_t> transactionAndTimerID;
     Internal::TimersCache& timersCache;
+
     boost::asio::ip::udp::socket socket;
     std::array<char, 1024> messageBuffer{};
     boost::asio::ip::udp::endpoint remoteEndpoint{};
     MessageQueue<MessageType> messageQueue;
+    std::list<ParkedMessage> parkedMessages;
+    std::map<uint32_t, uint32_t> transactionAndTimerID;
 
-    void handleReceive(const boost::system::error_code& error, std::size_t bytesRead);
-    void sendMessage(uint32_t identifier, ServiceModule::Message& moduleRequest);
-    void handleSend(const boost::system::error_code& error, std::size_t bytesRead);
+    void send();
+    virtual bool sendToDestination(const Destination& destination, std::shared_ptr<std::string> message);
 
     uint32_t generateTransactionCode() const;
-    static void timerExpiration(std::pair<std::shared_ptr<Server>, std::shared_ptr<ParkedMessage>> serverAndTransactionID);
+
+    void handleRequest(boost::asio::ip::udp::endpoint, ServiceModule::Message&);
+    void handleResponse(ServiceModule::Message&);
+
+    void processHandleReceiveError(const boost::system::error_code& error);
+    void processSendError(const boost::system::error_code& error);
+
+    ServiceModule::Message makeRequestMessage(google::protobuf::Any*);
+
+    void startTimerToResend(const Destination& destination, const ServiceModule::Message& request);
 
 public:
     explicit Server(boost::asio::io_context& ioContext, std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>&,
@@ -48,7 +64,8 @@ public:
     bool bindToListeningSocket(uint8_t port);
     void startReading();
 
-    void sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest);
+    bool sendRequest(uint32_t identifier, google::protobuf::Any* request);
+    bool sendRequest(uint32_t identifier, ServiceModule::Message& request);
 };
 
 } // namespace Module

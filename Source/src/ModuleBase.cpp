@@ -48,10 +48,7 @@ bool ModuleBase::waitForRegisterToWatchdog() {
     return connected;
 }
 
-int ModuleBase::startUserTask(int argc, char* argv[]) {
-    ModuleUserProcess userTask{};
-    return userTask.main(argc, argv);
-}
+int ModuleBase::startUserTask(int argc, char* argv[]) { return userTask.main(argc, argv); }
 
 void ModuleBase::moduleShutdownHandler() {
     // Set module to stop running
@@ -67,5 +64,17 @@ void ModuleBase::moduleShutdownHandler() {
 }
 
 void ModuleBase::SIGINTSignalHandler(int signalNumber) { exit(signalNumber); }
+
+bool ModuleBase::startModuleServer() {
+    bool serverStarted{};
+    try {
+        this->server->bindToListeningSocket(5632);
+        this->server->startReading();
+        serverStarted = true;
+    } catch (std::exception& ex) {
+        Log::error("ModuleBase::startModuleServer caught exception = " + std::string(ex.what()));
+    }
+    return serverStarted;
+}
 
 } // namespace Module

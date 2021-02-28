@@ -2,7 +2,6 @@
 #include "Logging.hpp"
 #include "ModuleGlobals.hpp"
 #include "Timer.hpp"
-#include <algorithm>
 #include <boost/bind.hpp>
 #include <memory>
 
@@ -19,6 +18,7 @@ bool Server::bindToListeningSocket(uint8_t port) {
         this->socket.open(boost::asio::ip::udp::v4());
         this->socket.bind(myEndpoint);
     } catch (boost::system::error_code& error) {
+        Log::critical("Server::bindToListeningSocket: " + error.message());
         socketBind = false;
     }
     return socketBind;
@@ -38,89 +38,185 @@ uint32_t Server::generateTransactionCode() const {
 
 void Server::startReading() {
     this->socket.async_receive_from(
-        boost::asio::buffer(messageBuffer), remoteEndpoint,
-        boost::bind(&Module::Server::handleReceive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+        boost::asio::buffer(messageBuffer), remoteEndpoint, [this](const boost::system::error_code& error, std::size_t bytesRead) {
+            if (error) {
+                this->processHandleReceiveError(error);
+            } else {
+                // Reserve all required memory to avoid reallocation
+                // and get local copy of received message request
+                std::string receivedMessage{};
+                receivedMessage.reserve(bytesRead);
+                std::copy_n(messageBuffer.begin(), bytesRead, std::back_inserter(receivedMessage));
+
+                // Get local copy of message sender endpoint
+                boost::asio::ip::udp::endpoint senderEndpoint{remoteEndpoint};
+
+                // Starting listening for new incoming message
+                this->startReading();
+
+                // Start processing received message
+                ServiceModule::Message serviceModuleMessage{};
+                if (serviceModuleMessage.ParseFromString(receivedMessage)) {
+                    if (serviceModuleMessage.has_header()) {
+                        if (serviceModuleMessage.has_request()) {
+                            this->handleRequest(senderEndpoint, serviceModuleMessage);
+                        } else if (serviceModuleMessage.has_response()) {
+                            this->handleResponse(serviceModuleMessage);
+                        } else {
+                            Log::error("Server::handleReceive - Received message without request or response data");
+                        }
+                    } else {
+                        Log::error("Server::handleReceive - Received message without header");
+                    }
+                } else {
+                    Log::error("Server::startReading - Failed to parse message - size: " + std::to_string(bytesRead));
+                }
+            }
+        });
 }
 
-void Server::handleReceive(const boost::system::error_code& error, std::size_t bytesRead) {
-    if (!error) {
-        this->startReading();
-    } else {
-        std::string receivedMessage{};
-        std::copy_n(messageBuffer.begin(), bytesRead, std::back_inserter(receivedMessage));
-
-        ServiceModule::Message message{};
-        message.ParseFromString(receivedMessage);
+bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest) {
+    bool sendRequest{};
+    auto endpoint = servicesEndpointsMap.find(identifier);
+    if (endpoint != std::end(servicesEndpointsMap)) {
+        Destination destination{};
+        destination.endpoint = endpoint->second;
+        destination.serviceIdentifier = identifier;
+        auto destinationAndRequestPair = std::make_pair(destination, this->makeRequestMessage(anyRequest));
+        // Forward message to sending queue
+        if (this->messageQueue.push(destinationAndRequestPair)) {
+            if (this->messageQueue.size() > 1) {
+                Log::trace("Server::startSending - Sending in progress");
+            } else {
+                this->send();
+                sendRequest = true;
+            }
+        } else {
+            Log::error("Server::sendRequest - Failed to push message into messages queue");
+        }
     }
+    return sendRequest;
 }
 
-void Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest) {
+bool Server::sendRequest(uint32_t identifier, ServiceModule::Message& request) {
+    bool sendRequest{};
+    auto endpoint = servicesEndpointsMap.find(identifier);
+    if (endpoint != std::end(servicesEndpointsMap)) {
+        Destination destination{};
+        destination.endpoint = endpoint->second;
+        destination.serviceIdentifier = identifier;
+        auto destinationAndRequestPair = std::make_pair(destination, request);
+
+        // Forward message to sending queue
+        if (this->messageQueue.push(destinationAndRequestPair)) {
+            if (this->messageQueue.size() > 1) {
+                Log::trace("Server::startSending - Sending in progress");
+            } else {
+                sendRequest = true;
+                this->send();
+            }
+        } else {
+            Log::error("Server::sendRequest - Failed to push message into messages queue");
+        }
+    }
+    return sendRequest;
+}
+
+ServiceModule::Message Server::makeRequestMessage(google::protobuf::Any* anyRequest) {
     auto* requestHeader = new ServiceModule::Header{};
     requestHeader->set_senderidentifier(Module::Globals::moduleIdentifier);
     requestHeader->set_operationcode(ServiceModule::OperationCode::ModuleRequest);
     requestHeader->set_transactioncode(this->generateTransactionCode());
-
     auto* moduleRequest = new ServiceModule::Request{};
     moduleRequest->set_allocated_request(anyRequest);
-
     ServiceModule::Message messageToSend{};
     messageToSend.set_allocated_header(requestHeader);
     messageToSend.set_allocated_request(moduleRequest);
-
-    this->sendMessage(identifier, messageToSend);
+    return messageToSend;
 }
 
-void func(ParkedMessage parked) {}
+void Server::send() {
+    // Get message to send
+    auto& [destination, message] = this->messageQueue.front();
+    // Start timer
+    this->startTimerToResend(destination, message);
+    // Create message
+    auto messageAsString = std::make_shared<std::string>();
+    message.SerializeToString(messageAsString.get());
+    this->sendToDestination(destination, messageAsString);
+}
 
-void Server::sendMessage(uint32_t identifier, ServiceModule::Message& messageToSend) {
-    auto endpoint = servicesEndpointsMap.find(identifier);
-    if (endpoint != std::end(servicesEndpointsMap)) {
-        std::string message{};
-        messageToSend.SerializeToString(&message);
-        std::pair messaged{endpoint->second, message};
-        if (this->messageQueue.push(messaged)) {
-            std::shared_ptr<ParkedMessage> parkedMessage{};
-            parkedMessage->transactionCode = messageToSend.header().transactioncode();
-            parkedMessage->destination = endpoint->second;
-            parkedMessage->message = message;
-            auto parkkk = std::make_unique<Timer<std::pair<std::shared_ptr<Server>, std::shared_ptr<ParkedMessage>>>>(
-                timerExpiration, std::make_pair(shared_from_this(), parkedMessage));
-            parkedMessage->timerID = timersCache.registerTimer(std::move(parkkk));
-            transactionAndTimerID.emplace(parkedMessage->transactionCode, parkedMessage->timerID);
+void Server::startTimerToResend(const Destination& destination, const ServiceModule::Message& request) {
+    const auto transactionCode = request.header().transactioncode();
+    auto parkedMessage = std::make_shared<ParkedMessage>();
+    parkedMessage->destination = destination;
+    parkedMessage->message = request;
+    parkedMessage->transactionCode = transactionCode;
+    auto resendTimer = std::make_unique<Timer<std::shared_ptr<ParkedMessage>>>(
+        [this](std::shared_ptr<ParkedMessage> message) {
+            if (message) {
+                auto iter = transactionAndTimerID.find(message->transactionCode);
+                if (iter != std::end(transactionAndTimerID)) {
+                    transactionAndTimerID.erase(iter);
+                }
 
-            if (this->messageQueue.size() > 1) {
-                Log::trace("Server::startSending - Sending in progress");
+                this->sendRequest(message->destination.serviceIdentifier, message->message);
+            }
+        },
+        parkedMessage);
+    const auto resendTimerID = timersCache.registerTimer(std::move(resendTimer));
+    // Put timer ID into running transactions lists
+    this->transactionAndTimerID.emplace(transactionCode, resendTimerID);
+}
+
+bool Server::sendToDestination(const Destination& destination, std::shared_ptr<std::string> message) {
+    bool sendToDestination{true};
+    if (message) {
+        this->socket.async_send_to(boost::asio::buffer(*message), destination.endpoint,
+                                   [this, message](const boost::system::error_code& error, std::size_t bytesRead) {
+                                       if (error) {
+                                           this->processSendError(error);
+                                       } else {
+                                           // Remove send message
+                                           this->messageQueue.pop();
+                                           if (this->messageQueue.empty()) {
+                                               Log::trace("Server::sendToDestination - All messages sent, leaving");
+                                           } else {
+                                               this->send();
+                                           }
+                                       }
+                                   });
+    } else {
+        sendToDestination = false;
+        Log::error("Server::sendToDestination: Passed nullptr message to send");
+    }
+    return sendToDestination;
+}
+
+void Server::handleRequest(boost::asio::ip::udp::endpoint, ServiceModule::Message& requestMessage) {}
+
+void Server::handleResponse(ServiceModule::Message& responseMessage) {
+    if (!responseMessage.has_response()) {
+        Log::error("Server::handleResponse message has no response data");
+    } else {
+        const auto& headerData = responseMessage.header();
+        const auto& responseData = responseMessage.response();
+
+        if (responseData.responsecode() == ServiceModule::Response::Success) {
+            auto iter = transactionAndTimerID.find(headerData.transactioncode());
+            if (iter != std::end(transactionAndTimerID)) {
+                timersCache.removeTimer(iter->second);
+                transactionAndTimerID.erase(iter);
             } else {
-                auto& [destination, message] = this->messageQueue.front();
-                this->socket.async_send_to(boost::asio::buffer(message), destination,
-                                           boost::bind(&Module::Server::handleSend, this, boost::asio::placeholders::error,
-                                                       boost::asio::placeholders::bytes_transferred));
+                Log::error("Server::handleResponse - Not found transaction in cache - skipping");
             }
         } else {
-            Log::error("Server::sendMessage - Failed to push message into messages queue");
-        }
-    } else {
-        Log::error("Server::sendMessage - Not found correct endpoint");
-    }
-}
-
-void Server::handleSend(const boost::system::error_code& error, std::size_t bytesRead) {
-    if (error) {
-        Log::error("Server::handleSend error");
-    } else {
-        // Remove send message
-        this->messageQueue.pop();
-        if (this->messageQueue.empty()) {
-            Log::trace("Server::handleSend - All messages sent, leaving");
-        } else {
-            auto& [destination, message] = this->messageQueue.front();
-            this->socket.async_send_to(boost::asio::buffer(message), destination,
-                                       boost::bind(&Module::Server::handleSend, this, boost::asio::placeholders::error,
-                                                   boost::asio::placeholders::bytes_transferred));
+            Log::error("Server::handleResponse - Received failure in response message");
         }
     }
 }
 
-void Server::timerExpiration(std::pair<std::shared_ptr<Server>, std::shared_ptr<ParkedMessage>> serverAndTransactionID) {}
+void Server::processHandleReceiveError(const boost::system::error_code& error) {}
+void Server::processSendError(const boost::system::error_code& error) {}
 
 } // namespace Module

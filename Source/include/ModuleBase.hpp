@@ -29,7 +29,7 @@ private:
     std::shared_ptr<ModuleWatchdogConnection> connection;
     std::thread ioContextWorkThread;
     std::thread watchdogConnectionWatcherThread;
-
+    ModuleUserProcess userTask{};
 public:
     ModuleBase(int argc, char* argv[]);
     virtual ~ModuleBase();
@@ -37,6 +37,7 @@ public:
     bool startWatchdogConnectionTask();
     int startUserTask(int argc, char* argv[]);
     void moduleShutdownHandler();
+    bool startModuleServer();
 
     static void SIGINTSignalHandler(int);
 };
