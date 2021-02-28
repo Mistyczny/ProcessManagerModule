@@ -1,0 +1,3 @@
+project(ExampleModuleTests)
+
+add_subdirectory(ExampleModuleOne)

@@ -14,7 +14,9 @@ ModuleBase::ModuleBase(int argc, char* argv[])
     : ioContext{}, m_worker{boost::asio::make_work_guard(ioContext)}, connection{std::make_shared<ModuleWatchdogConnection>(
                                                                           ioContext, watchdogConnectionState)},
       ioContextWorkThread{[](boost::asio::io_context& ioContext) { ioContext.run(); }, std::ref(ioContext)},
-      watchdogConnectionWatcherThread{WatchdogConnectionWatcher(), this->connection, std::ref(watchdogConnectionState)} {}
+      watchdogConnectionWatcherThread{WatchdogConnectionWatcher(), this->connection, std::ref(watchdogConnectionState)} {
+    server = std::make_shared<Server>(ioContext, servicesEndpointsMap, timersCache);
+}
 
 ModuleBase::~ModuleBase() {
     Log::info("Destroying ModuleBase");
@@ -46,10 +48,7 @@ bool ModuleBase::waitForRegisterToWatchdog() {
     return connected;
 }
 
-int ModuleBase::startUserTask(int argc, char* argv[]) {
-    ModuleUserProcess userTask{};
-    return userTask.main(argc, argv);
-}
+int ModuleBase::startUserTask(int argc, char* argv[]) { return userTask.main(argc, argv); }
 
 void ModuleBase::moduleShutdownHandler() {
     // Set module to stop running
@@ -65,5 +64,17 @@ void ModuleBase::moduleShutdownHandler() {
 }
 
 void ModuleBase::SIGINTSignalHandler(int signalNumber) { exit(signalNumber); }
+
+bool ModuleBase::startModuleServer() {
+    bool serverStarted{};
+    try {
+        this->server->bindToListeningSocket(5632);
+        this->server->startReading();
+        serverStarted = true;
+    } catch (std::exception& ex) {
+        Log::error("ModuleBase::startModuleServer caught exception = " + std::string(ex.what()));
+    }
+    return serverStarted;
+}
 
 } // namespace Module

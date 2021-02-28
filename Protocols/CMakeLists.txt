@@ -31,7 +31,7 @@ add_dependencies(WatchdogModuleProto WatchdogModuleProtocolDownload)
 # Service-Module communication protocol download
 #
 
-set(ServiceModuleProtocolVersion 1.1)
+set(ServiceModuleProtocolVersion 1.3)
 set(ServiceModuleProtocolPackage ServiceModuleProtocol_${ServiceModuleProtocolVersion}.tar)
 
 set(ServiceModuleProtocolDir ${CMAKE_CURRENT_BINARY_DIR}/service-module-protocol)

@@ -2,6 +2,7 @@
 #include "Communication.hpp"
 #include "ModuleConnection.hpp"
 #include "ModuleRegistrationState.hpp"
+#include "ModuleServer.hpp"
 #include "ModuleSettings.hpp"
 #include "ModuleUserProcess.hpp"
 #include "ModuleWatchdogConnectionState.hpp"
@@ -9,6 +10,7 @@
 #include "Types.hpp"
 #include <atomic>
 #include <boost/asio.hpp>
+#include <map>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -17,14 +19,17 @@ namespace Module {
 
 class ModuleBase {
 private:
+    std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint> servicesEndpointsMap;
     boost::asio::io_context ioContext;
     Settings settings;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> m_worker;
+    Internal::TimersCache timersCache{};
+    std::shared_ptr<Server> server{nullptr};
     WatchdogConnectionState watchdogConnectionState;
     std::shared_ptr<ModuleWatchdogConnection> connection;
     std::thread ioContextWorkThread;
     std::thread watchdogConnectionWatcherThread;
-
+    ModuleUserProcess userTask{};
 public:
     ModuleBase(int argc, char* argv[]);
     virtual ~ModuleBase();
@@ -32,6 +37,7 @@ public:
     bool startWatchdogConnectionTask();
     int startUserTask(int argc, char* argv[]);
     void moduleShutdownHandler();
+    bool startModuleServer();
 
     static void SIGINTSignalHandler(int);
 };
