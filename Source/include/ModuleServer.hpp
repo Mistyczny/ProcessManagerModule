@@ -1,5 +1,6 @@
 #pragma once
 #include "MessageQueue.hpp"
+#include "ModuleConfiguration.hpp"
 #include "ServiceModule.pb.h"
 #include "TimersCache.hpp"
 #include "Types.hpp"
@@ -35,7 +36,7 @@ protected:
     Internal::TimersCache& timersCache;
 
     boost::asio::ip::udp::socket socket;
-    std::array<char, 1024> messageBuffer{};
+    std::vector<char> messageBuffer{};
     boost::asio::ip::udp::endpoint remoteEndpoint{};
     MessageQueue<MessageType> messageQueue;
     std::list<ParkedMessage> parkedMessages;
@@ -61,7 +62,7 @@ public:
                     Internal::TimersCache& timersCache);
     virtual ~Server() = default;
 
-    bool bindToListeningSocket(uint8_t port);
+    bool bindToListeningSocket();
     void startReading();
 
     bool sendRequest(uint32_t identifier, google::protobuf::Any* request);

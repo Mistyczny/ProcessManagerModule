@@ -1,7 +1,9 @@
 #include "ModuleBase.hpp"
 #include "ApplicationDetails.hpp"
 #include "Logging.hpp"
+#include "ModuleConfigurationReader.hpp"
 #include "ModuleConnection.hpp"
+#include "MongoDbEnvironment.hpp"
 #include "ModuleGlobals.hpp"
 #include <chrono>
 #include <iostream>
@@ -16,12 +18,20 @@ ModuleBase::ModuleBase(int argc, char* argv[])
       ioContextWorkThread{[](boost::asio::io_context& ioContext) { ioContext.run(); }, std::ref(ioContext)},
       watchdogConnectionWatcherThread{WatchdogConnectionWatcher(), this->connection, std::ref(watchdogConnectionState)} {
     server = std::make_shared<Server>(ioContext, servicesEndpointsMap, timersCache);
+    Mongo::DbEnvironment::initialize();
 }
 
 ModuleBase::~ModuleBase() {
     Log::info("Destroying ModuleBase");
-    watchdogConnectionWatcherThread.join();
-    ioContextWorkThread.join();
+    Globals::isModuleRunning = false;
+    watchdogConnectionState.setConnectionStateAndNotifyAll(ConnectionState::Shutdown);
+    if (watchdogConnectionWatcherThread.joinable()) {
+        watchdogConnectionWatcherThread.join();
+    }
+    this->ioContext.stop();
+    if (ioContextWorkThread.joinable()) {
+        ioContextWorkThread.join();
+    }
 }
 
 bool ModuleBase::startWatchdogConnectionTask() {
@@ -68,13 +78,24 @@ void ModuleBase::SIGINTSignalHandler(int signalNumber) { exit(signalNumber); }
 bool ModuleBase::startModuleServer() {
     bool serverStarted{};
     try {
-        this->server->bindToListeningSocket(5632);
+        this->server->bindToListeningSocket();
         this->server->startReading();
         serverStarted = true;
     } catch (std::exception& ex) {
         Log::error("ModuleBase::startModuleServer caught exception = " + std::string(ex.what()));
     }
     return serverStarted;
+}
+
+bool ModuleBase::readConfiguration() {
+    ConfigurationReader configurationReader{Configuration::getInstance()};
+    return configurationReader.readConfiguration(Globals::moduleIdentifier);
+}
+
+bool ModuleBase::configureModule() {
+    bool configureModule{true};
+    Log::updateConfiguration(Globals::moduleIdentifier);
+    return configureModule;
 }
 
 } // namespace Module

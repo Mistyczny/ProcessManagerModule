@@ -35,7 +35,6 @@ void ModuleWatchdogConnection::sendConnectRequest() {
     requestData.SerializeToString(&connectMessage.body);
     connectMessage.header.operationCode = WatchdogModule::Operation::ConnectRequest;
     connectMessage.header.size = connectMessage.body.size();
-
     this->sendMessage(connectMessage);
 }
 
@@ -46,14 +45,10 @@ void ModuleWatchdogConnection::sendPing() {
     pingRequest.SerializeToString(&pingMessage.body);
     pingMessage.header.operationCode = WatchdogModule::Operation::PingRequest;
     pingMessage.header.size = pingMessage.body.size();
-
     this->sendMessage(pingMessage);
 }
 
-void ModuleWatchdogConnection::onTimerExpiration() {
-    Log::info("Timer expired");
-    this->sendPing();
-}
+void ModuleWatchdogConnection::onTimerExpiration() { this->sendPing(); }
 
 void ModuleWatchdogConnection::disconnect() {
     if (this->socket->is_open()) {

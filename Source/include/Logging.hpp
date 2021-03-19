@@ -1,5 +1,7 @@
 #pragma once
 #include "ApplicationDetails.hpp"
+#include "ModuleConfiguration.hpp"
+#include "Types.hpp"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 #include <iostream>
@@ -14,7 +16,7 @@ private:
     static inline std::unique_ptr<Log> instance = nullptr;
     std::shared_ptr<spdlog::logger> logger = nullptr;
 
-    spdlog::level::level_enum translateToSpdlogLevel(LogLevel& logLevel) {
+    static spdlog::level::level_enum translateToSpdlogLevel(LogLevel& logLevel) {
         spdlog::level::level_enum spdlogLevel{};
         switch (logLevel) {
         case LogLevel::TRACE:
@@ -39,12 +41,41 @@ private:
         return spdlogLevel;
     }
 
+    static spdlog::level::level_enum translateToSpdlogLevel(std::string& logLevel) {
+        spdlog::level::level_enum spdlogLevel{};
+        if (logLevel == "TRACE") {
+            spdlogLevel = spdlog::level::trace;
+        } else if (logLevel == "DEBUG") {
+            spdlogLevel = spdlog::level::debug;
+        } else if (logLevel == "INFO") {
+            spdlogLevel = spdlog::level::info;
+        } else if (logLevel == "WARNING") {
+            spdlogLevel = spdlog::level::warn;
+        } else if (logLevel == "ERROR") {
+            spdlogLevel = spdlog::level::err;
+        } else if (logLevel == "CRITICAL") {
+            spdlogLevel = spdlog::level::critical;
+        } else {
+            spdlogLevel = spdlog::level::info;
+        }
+        return spdlogLevel;
+    }
+
 public:
     template <typename T> Log(T moduleIdentifier, LogLevel logLevel) {
         logger = spdlog::basic_logger_mt("file_logger", std::string{"/home/kacper/Logs/" + std::string(moduleIdentifier) + ".log"});
         logger->set_pattern("[%H:%M:%S %z] [thread %t] %v");
-        logger->set_level(this->translateToSpdlogLevel(logLevel));
+        logger->set_level(translateToSpdlogLevel(logLevel));
         spdlog::flush_every(std::chrono::seconds(3));
+    }
+
+    static void updateConfiguration(Types::ModuleIdentifier moduleIdentifier) {
+        if (instance) {
+            std::string stringModuleIdentifier = std::to_string(moduleIdentifier);
+            instance->logger->set_pattern("[%H:%M:%S %z] [ModuleIdentifier " + stringModuleIdentifier + "] [thread %t] %v");
+            auto& loggingConfiguration = Module::Configuration::getInstance().getLoggingConfiguration();
+            instance->logger->set_level(translateToSpdlogLevel(loggingConfiguration.loggingLevel));
+        }
     }
 
     virtual ~Log() = default;

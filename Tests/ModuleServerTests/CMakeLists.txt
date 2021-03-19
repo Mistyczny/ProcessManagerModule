@@ -6,6 +6,7 @@ set(ModuleServerSource
     ${CMAKE_SOURCE_DIR}/Source/src/TimersCache.cpp
     ${CMAKE_SOURCE_DIR}/Source/src/ModuleGlobals.cpp
     ${CMAKE_SOURCE_DIR}/Source/src/Types.cpp
+    ${CMAKE_SOURCE_DIR}/Source/src//ModuleConfiguration.cpp
 )
 
 add_executable(ModuleServerTests ./ModuleServerTests.cpp ${ModuleServerSource})

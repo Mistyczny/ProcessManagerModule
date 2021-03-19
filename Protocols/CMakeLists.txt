@@ -7,7 +7,7 @@ set(ArtifactoryProtocolsPath /process-manager-local/CommunicationProtocols)
 set(WatchdogModuleProtocolVersion 1.0)
 set(WatchdogModuleProtocolPackage WatchdogModuleProtocol_${WatchdogModuleProtocolVersion}.tar)
 
-set(WatchdogModuleProtocolDir ${CMAKE_CURRENT_BINARY_DIR}/watchdog-service-protocol)
+set(WatchdogModuleProtocolDir ${CMAKE_CURRENT_BINARY_DIR}/watchdog-module-protocol)
 ExternalProject_Add(WatchdogModuleProtocolDownload
     PREFIX
         ${CMAKE_CURRENT_BINARY_DIR}/download

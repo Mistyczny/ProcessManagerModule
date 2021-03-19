@@ -1,5 +1,6 @@
 #pragma once
 #include "Communication.hpp"
+#include "ModuleConfiguration.hpp"
 #include "ModuleConnection.hpp"
 #include "ModuleRegistrationState.hpp"
 #include "ModuleServer.hpp"
@@ -21,7 +22,6 @@ class ModuleBase {
 private:
     std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint> servicesEndpointsMap;
     boost::asio::io_context ioContext;
-    Settings settings;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> m_worker;
     Internal::TimersCache timersCache{};
     std::shared_ptr<Server> server{nullptr};
@@ -30,6 +30,7 @@ private:
     std::thread ioContextWorkThread;
     std::thread watchdogConnectionWatcherThread;
     ModuleUserProcess userTask{};
+
 public:
     ModuleBase(int argc, char* argv[]);
     virtual ~ModuleBase();
@@ -38,6 +39,8 @@ public:
     int startUserTask(int argc, char* argv[]);
     void moduleShutdownHandler();
     bool startModuleServer();
+    bool readConfiguration();
+    bool configureModule();
 
     static void SIGINTSignalHandler(int);
 };

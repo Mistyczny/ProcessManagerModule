@@ -1,8 +1,11 @@
 #include "ModuleServer.hpp"
 #include "Logging.hpp"
 #include "ModuleGlobals.hpp"
+#include "MongoDbEnvironment.hpp"
+#include "MongoServicesCollection.hpp"
 #include "Timer.hpp"
 #include <boost/bind.hpp>
+#include <chrono>
 #include <memory>
 
 namespace Module {
@@ -11,12 +14,14 @@ Server::Server(boost::asio::io_context& ioContext, std::map<Types::ServiceIdenti
                Internal::TimersCache& timersCache)
     : ioContext{ioContext}, servicesEndpointsMap{servicesEndpointsMap}, socket{ioContext}, timersCache{timersCache} {}
 
-bool Server::bindToListeningSocket(uint8_t port) {
+bool Server::bindToListeningSocket() {
     bool socketBind{true};
-    boost::asio::ip::udp::endpoint myEndpoint{boost::asio::ip::udp::v4(), port};
+    auto& serverConfiguration = Configuration::getInstance().getServerConfiguration();
+    boost::asio::ip::udp::endpoint myEndpoint{boost::asio::ip::udp::v4(), serverConfiguration.listeningPort};
     try {
         this->socket.open(boost::asio::ip::udp::v4());
         this->socket.bind(myEndpoint);
+        this->messageBuffer.resize(serverConfiguration.messageBufferSize);
     } catch (boost::system::error_code& error) {
         Log::critical("Server::bindToListeningSocket: " + error.message());
         socketBind = false;
@@ -79,6 +84,7 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
     bool sendRequest{};
     auto endpoint = servicesEndpointsMap.find(identifier);
     if (endpoint != std::end(servicesEndpointsMap)) {
+        Log::trace("Server::sendRequest - getting service from local cache");
         Destination destination{};
         destination.endpoint = endpoint->second;
         destination.serviceIdentifier = identifier;
@@ -93,6 +99,32 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
             }
         } else {
             Log::error("Server::sendRequest - Failed to push message into messages queue");
+        }
+    } else {
+        Log::trace("Server::sendRequest - getting service from database");
+        // Service was not found in the cache, lets get it from database
+        auto servicesCollectionEntry = Mongo::DbEnvironment::getInstance()->getClient();
+        Mongo::ServicesCollection services{*servicesCollectionEntry, "Services"};
+        auto destinationService = services.getService(identifier);
+        if (destinationService.has_value()) {
+            auto address = boost::asio::ip::address::from_string(destinationService->ipAddress);
+            boost::asio::ip::udp::endpoint serviceEndpoint{address, destinationService->port};
+            Destination destination{};
+            destination.endpoint = serviceEndpoint;
+            destination.serviceIdentifier = identifier;
+
+            auto destinationAndRequestPair = std::make_pair(destination, this->makeRequestMessage(anyRequest));
+            // Forward message to sending queue
+            if (this->messageQueue.push(destinationAndRequestPair)) {
+                if (this->messageQueue.size() > 1) {
+                    Log::trace("Server::startSending - Sending in progress");
+                } else {
+                    this->send();
+                    sendRequest = true;
+                }
+            } else {
+                Log::error("Server::sendRequest - Failed to push message into messages queue");
+            }
         }
     }
     return sendRequest;
@@ -117,6 +149,33 @@ bool Server::sendRequest(uint32_t identifier, ServiceModule::Message& request) {
             }
         } else {
             Log::error("Server::sendRequest - Failed to push message into messages queue");
+        }
+    } else {
+        Log::trace("Server::sendRequest - getting service from database");
+        // Service was not found in the cache, lets get it from database
+        auto servicesCollectionEntry = Mongo::DbEnvironment::getInstance()->getClient();
+        Mongo::ServicesCollection services{*servicesCollectionEntry, "Services"};
+        auto destinationService = services.getService(identifier);
+        if (destinationService.has_value()) {
+            auto address = boost::asio::ip::address::from_string(destinationService->ipAddress);
+            boost::asio::ip::udp::endpoint serviceEndpoint{address, destinationService->port};
+            Destination destination{};
+            destination.endpoint = serviceEndpoint;
+            destination.serviceIdentifier = identifier;
+
+            auto destinationAndRequestPair = std::make_pair(destination, request);
+
+            // Forward message to sending queue
+            if (this->messageQueue.push(destinationAndRequestPair)) {
+                if (this->messageQueue.size() > 1) {
+                    Log::trace("Server::startSending - Sending in progress");
+                } else {
+                    sendRequest = true;
+                    this->send();
+                }
+            } else {
+                Log::error("Server::sendRequest - Failed to push message into messages queue");
+            }
         }
     }
     return sendRequest;
@@ -159,11 +218,12 @@ void Server::startTimerToResend(const Destination& destination, const ServiceMod
                 if (iter != std::end(transactionAndTimerID)) {
                     transactionAndTimerID.erase(iter);
                 }
-
                 this->sendRequest(message->destination.serviceIdentifier, message->message);
             }
         },
         parkedMessage);
+    auto& serverConfiguration = Configuration::getInstance().getServerConfiguration();
+    resendTimer->setDuration(std::chrono::seconds(serverConfiguration.timeBetweenMessageResendsInSeconds));
     const auto resendTimerID = timersCache.registerTimer(std::move(resendTimer));
     // Put timer ID into running transactions lists
     this->transactionAndTimerID.emplace(transactionCode, resendTimerID);

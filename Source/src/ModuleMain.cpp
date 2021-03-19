@@ -4,9 +4,11 @@
 #include <boost/signals2.hpp>
 
 enum ModuleStartupErrors {
-    StartConnectionTaskFailed = -3,
-    WaitForRegistrationTimeout = -4,
-    StartModuleServerFailed = -4,
+    FailedToReadConfiguration = 1,
+    FailedToConfigureModule,
+    StartConnectionTaskFailed,
+    WaitForRegistrationTimeout,
+    StartModuleServerFailed
 };
 
 int main(int argc, char* argv[]) {
@@ -15,7 +17,14 @@ int main(int argc, char* argv[]) {
     Log::initialize("ProcessManager", Log::LogLevel::TRACE);
 
     Module::ModuleBase moduleBase{argc, argv};
-    if (!moduleBase.startWatchdogConnectionTask()) {
+    if (!moduleBase.readConfiguration()) {
+        Log::critical("Failed to read configuration");
+        returnCode = ModuleStartupErrors::FailedToReadConfiguration;
+    } else if (!moduleBase.configureModule()) {
+        Log::critical("Failed to configure module");
+        returnCode = ModuleStartupErrors::FailedToConfigureModule;
+    } else if (!moduleBase.startWatchdogConnectionTask()) {
+        Log::critical("Failed to start watchdog connection task");
         returnCode = ModuleStartupErrors::StartConnectionTaskFailed;
     } else if (!moduleBase.waitForRegisterToWatchdog()) {
         Log::critical("waitForRegisterToWatchdog timed out");
