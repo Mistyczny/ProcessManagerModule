@@ -1,3 +1,10 @@
+/**
+ * @file ModuleServer.cpp
+ * @brief Module sending messages
+ * @author Kacper Waśniowski
+ * @copyright Kacper Waśniowski, All Rights Reserved
+ * @date 2021
+ */
 #include "ModuleServer.hpp"
 #include "Logging.hpp"
 #include "ModuleGlobals.hpp"

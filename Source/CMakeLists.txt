@@ -33,6 +33,12 @@ set(SOURCES
 list(APPEND MODULE_PUBLIC_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/Types.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ModuleServer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ModuleGlobals.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/Event.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/Timer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/EventManager.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ModuleUserProcess.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/Logging.hpp
 )
 
 add_library(Module SHARED ${SOURCES})
