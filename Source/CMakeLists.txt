@@ -30,7 +30,13 @@ set(SOURCES
     ${PROTO_SERVICE_MODULE_SRC}
 )
 
+list(APPEND MODULE_PUBLIC_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/Types.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ModuleServer.hpp
+)
+
 add_library(Module SHARED ${SOURCES})
+set_target_properties(Module PROPERTIES PUBLIC_HEADER "${MODULE_PUBLIC_HEADERS}")
 add_dependencies(Module
     WatchdogModuleProtocolDownload
     ServiceModuleProtocolDownload
@@ -38,6 +44,8 @@ add_dependencies(Module
 target_link_libraries(Module
         PUBLIC
     spdlog
+    mongocxx
+    bsoncxx
     ${Boost_LIBRARIES}
     ${PROTOBUF_LIBRARY}
     nlohmann_json::nlohmann_json
@@ -48,4 +56,15 @@ target_include_directories(Module
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/Source>"
     "$<BUILD_INTERFACE:${MongoCxxIncludes}>"
+)
+
+include(GNUInstallDirs)
+install(TARGETS Module
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            COMPONENT ${CMAKE_PROJECT_NAME}_RunTime
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT ${CMAKE_PROJECT_NAME}_RunTime
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT ${CMAKE_PROJECT_NAME}_Development
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )

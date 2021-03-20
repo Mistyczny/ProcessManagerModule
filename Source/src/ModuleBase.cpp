@@ -3,8 +3,8 @@
 #include "Logging.hpp"
 #include "ModuleConfigurationReader.hpp"
 #include "ModuleConnection.hpp"
-#include "MongoDbEnvironment.hpp"
 #include "ModuleGlobals.hpp"
+#include "MongoDbEnvironment.hpp"
 #include <chrono>
 #include <iostream>
 
