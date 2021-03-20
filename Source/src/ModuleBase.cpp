@@ -4,6 +4,7 @@
 #include "ModuleConfigurationReader.hpp"
 #include "ModuleConnection.hpp"
 #include "ModuleGlobals.hpp"
+#include "ModuleManager.hpp"
 #include "MongoDbEnvironment.hpp"
 #include <chrono>
 #include <iostream>
@@ -80,6 +81,7 @@ bool ModuleBase::startModuleServer() {
     try {
         this->server->bindToListeningSocket();
         this->server->startReading();
+        Manager::initialize(this->server);
         serverStarted = true;
     } catch (std::exception& ex) {
         Log::error("ModuleBase::startModuleServer caught exception = " + std::string(ex.what()));

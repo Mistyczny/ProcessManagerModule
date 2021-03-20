@@ -26,6 +26,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConfigurationReader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MongoDbEnvironment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/MongoServicesCollection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleManager.cpp
     ${PROTO_WATCHDOG_MODULE_SRC}
     ${PROTO_SERVICE_MODULE_SRC}
 )
