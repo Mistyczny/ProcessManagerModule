@@ -14,7 +14,7 @@ public:
     explicit Manager(std::shared_ptr<Server> server);
     static bool initialize(std::shared_ptr<Server>);
 
-    bool sendRequest(Types::ServiceIdentifier identifier, google::protobuf::Any* request);
+    static bool sendRequest(Types::ServiceIdentifier identifier, google::protobuf::Any* request);
 };
 
 } // namespace Module

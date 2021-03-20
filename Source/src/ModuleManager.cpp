@@ -17,10 +17,10 @@ bool Manager::initialize(std::shared_ptr<Server> server) {
 Manager::Manager(std::shared_ptr<Server> server) : server{server} {}
 
 bool Manager::sendRequest(Types::ServiceIdentifier identifier, google::protobuf::Any* request) {
-    if(this->server) {
+    if (!instance) {
         throw std::runtime_error("Module server was not initalized");
     }
-    return this->server->sendRequest(identifier, request);
+    return instance->server->sendRequest(identifier, request);
 }
 
 } // namespace Module
