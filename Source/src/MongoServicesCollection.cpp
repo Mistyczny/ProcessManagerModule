@@ -1,3 +1,10 @@
+/**
+ * @file MongoServicesCollection.cpp
+ * @brief Services collection in which service data is stored
+ * @author Kacper Waśniowski
+ * @copyright Kacper Waśniowski, All Rights Reserved
+ * @date 2021
+ */
 #include "MongoServicesCollection.hpp"
 #include "Logging.hpp"
 #include "MongoDbEnvironment.hpp"
@@ -23,7 +30,6 @@ std::optional<ServiceRecord> ServicesCollection::viewToServiceRecord(bsoncxx::do
     auto ipAddress = view["IpAddress"];
     auto port = view["Port"];
     auto name = view["Name"];
-
     if (serviceIdentifier.type() != bsoncxx::type::k_int32) {
         Log::error("Failed to get module identifier");
     } else if (ipAddress.type() != bsoncxx::type::k_string) {
@@ -31,12 +37,12 @@ std::optional<ServiceRecord> ServicesCollection::viewToServiceRecord(bsoncxx::do
     } else if (port.type() != bsoncxx::type::k_int32) {
         Log::error("Failed to get port");
     } else if (name.type() != bsoncxx::type::k_string) {
-
+        Log::error("Failed to get name");
     } else {
         serviceRecord = std::make_optional<ServiceRecord>();
         serviceRecord->identifier = serviceIdentifier.get_int32();
         serviceRecord->ipAddress = ipAddress.get_string().value.to_string();
-        serviceRecord->name  = name.get_string().value.to_string();
+        serviceRecord->name = name.get_string().value.to_string();
     }
     return serviceRecord;
 }
@@ -66,5 +72,7 @@ std::optional<ServiceRecord> ServicesCollection::getService(const std::string& n
     }
     return serviceRecord;
 }
+
+void ServicesCollection::drop() { this->servicesCollection.drop(); }
 
 } // namespace Mongo

@@ -125,6 +125,8 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
             } else {
                 Log::error("Server::sendRequest - Failed to push message into messages queue");
             }
+        } else {
+            Log::trace("Server::sendRequest - service not found in database");
         }
     }
     return sendRequest;
