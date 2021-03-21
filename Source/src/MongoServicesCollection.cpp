@@ -43,6 +43,7 @@ std::optional<ServiceRecord> ServicesCollection::viewToServiceRecord(bsoncxx::do
         serviceRecord->identifier = serviceIdentifier.get_int32();
         serviceRecord->ipAddress = ipAddress.get_string().value.to_string();
         serviceRecord->name = name.get_string().value.to_string();
+        serviceRecord->port = port.get_int32();
     }
     return serviceRecord;
 }
