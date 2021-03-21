@@ -21,7 +21,7 @@ bool Manager::sendRequest(Types::ServiceIdentifier identifier, google::protobuf:
     bool requestSend{false};
     if (!instance) {
         Log::error("Module::Manager was not initialized");
-    } else if (instance->server) {
+    } else if (!instance->server) {
         Log::error("Module::Manager server was not initialized");
     } else {
         requestSend = instance->server->sendRequest(identifier, request);

@@ -56,7 +56,7 @@ private:
         } else if (logLevel == "CRITICAL") {
             spdlogLevel = spdlog::level::critical;
         } else {
-            spdlogLevel = spdlog::level::info;
+            spdlogLevel = spdlog::level::trace;
         }
         return spdlogLevel;
     }
