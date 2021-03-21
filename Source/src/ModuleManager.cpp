@@ -1,4 +1,5 @@
 #include "ModuleManager.hpp"
+#include "Logging.hpp"
 
 namespace Module {
 
@@ -17,10 +18,16 @@ bool Manager::initialize(std::shared_ptr<Server> server) {
 Manager::Manager(std::shared_ptr<Server> server) : server{server} {}
 
 bool Manager::sendRequest(Types::ServiceIdentifier identifier, google::protobuf::Any* request) {
+    bool requestSend{false};
     if (!instance) {
-        throw std::runtime_error("Module server was not initalized");
+        Log::error("Module::Manager was not initialized");
+    } else if (instance->server) {
+        Log::error("Module::Manager server was not initialized");
+    } else {
+        requestSend = instance->server->sendRequest(identifier, request);
     }
-    return instance->server->sendRequest(identifier, request);
+    Log::trace("Sending request to: " + std::to_string(identifier));
+    return requestSend;
 }
 
 } // namespace Module

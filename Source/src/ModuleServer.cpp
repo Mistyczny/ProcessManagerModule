@@ -88,6 +88,7 @@ void Server::startReading() {
 }
 
 bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest) {
+    Log::trace("Server::sendRequest - send enter");
     bool sendRequest{};
     auto endpoint = servicesEndpointsMap.find(identifier);
     if (endpoint != std::end(servicesEndpointsMap)) {
@@ -97,6 +98,8 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
         destination.serviceIdentifier = identifier;
         auto destinationAndRequestPair = std::make_pair(destination, this->makeRequestMessage(anyRequest));
         // Forward message to sending queue
+        Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
+                   std::to_string(destination.endpoint.port()));
         if (this->messageQueue.push(destinationAndRequestPair)) {
             if (this->messageQueue.size() > 1) {
                 Log::trace("Server::startSending - Sending in progress");
@@ -204,6 +207,7 @@ ServiceModule::Message Server::makeRequestMessage(google::protobuf::Any* anyRequ
 }
 
 void Server::send() {
+    Log::trace("Server::send - sending message");
     // Get message to send
     auto& [destination, message] = this->messageQueue.front();
     // Start timer
