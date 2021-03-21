@@ -124,6 +124,8 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
             destination.serviceIdentifier = identifier;
 
             auto destinationAndRequestPair = std::make_pair(destination, this->makeRequestMessage(anyRequest));
+            Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
+                       std::to_string(destination.endpoint.port()));
             // Forward message to sending queue
             if (this->messageQueue.push(destinationAndRequestPair)) {
                 if (this->messageQueue.size() > 1) {
