@@ -205,6 +205,8 @@ ServiceModule::Message Server::makeRequestMessage(google::protobuf::Any* anyRequ
     ServiceModule::Message messageToSend{};
     messageToSend.set_allocated_header(requestHeader);
     messageToSend.set_allocated_request(moduleRequest);
+    std::cout << "HAS HEADER: " << messageToSend.has_header() << std::endl;
+    std::cout << "HAS REQUEST: " << messageToSend.has_request() << std::endl;
     return messageToSend;
 }
 

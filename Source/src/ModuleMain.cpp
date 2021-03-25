@@ -1,7 +1,8 @@
 #include "Logging.hpp"
 #include "ModuleBase.hpp"
+#include "ModuleGlobals.hpp"
 #include "Types.hpp"
-#include <boost/signals2.hpp>
+#include <boost/program_options.hpp>
 
 enum ModuleStartupErrors {
     FailedToReadConfiguration = 1,
@@ -11,11 +12,29 @@ enum ModuleStartupErrors {
     StartModuleServerFailed
 };
 
+void validateOptions(int argc, char* argv[]) {
+    try {
+        boost::program_options::options_description optionsDescription("Allowed options");
+        optionsDescription.add_options()("help", "Produce help message")("identifier", boost::program_options::value<uint32_t>(),
+                                                                         "set identifier");
+        boost::program_options::variables_map variablesMap{};
+        boost::program_options::store(boost::program_options::parse_command_line(argc, argv, optionsDescription), variablesMap);
+        boost::program_options::notify(variablesMap);
+        if (variablesMap.contains("identifier")) {
+            std::cout << variablesMap["identifier"].as<uint32_t>() << std::endl;
+            Module::Globals::moduleIdentifier = variablesMap["identifier"].as<uint32_t>();
+        } else {
+            std::cout << "THERE IS NO IDENTIFIER PROVIDED" << std::endl;
+        }
+    } catch (boost::program_options::error& ex) {
+    }
+}
+
 int main(int argc, char* argv[]) {
     ModuleStartupErrors returnCode{};
     // Provided module name is correct, start logger
     Log::initialize("ProcessManager", Log::LogLevel::TRACE);
-
+    validateOptions(argc, argv);
     Module::ModuleBase moduleBase{argc, argv};
     if (!moduleBase.readConfiguration()) {
         Log::critical("Failed to read configuration");

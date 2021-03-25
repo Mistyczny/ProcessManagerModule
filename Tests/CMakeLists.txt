@@ -1,4 +1,6 @@
-project(ProcessManagerTests)
+
+find_package(Catch2 REQUIRED)
+find_package(GTest CONFIG)
 
 add_subdirectory(ModuleServerTests)
 add_subdirectory(ModuleWatchdogMessageHandlersTests)

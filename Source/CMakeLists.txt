@@ -1,5 +1,3 @@
-project(Module)
-
 include_directories(${PROTOBUF_INCLUDE_DIR})
 protobuf_generate_cpp(PROTO_WATCHDOG_MODULE_SRC PROTO_WATCHDOG_MODULE_SRC_HEADER ${WatchdogModuleProtocolDir}/WatchdogModule.proto)
 protobuf_generate_cpp(PROTO_SERVICE_MODULE_SRC PROTO_SERVICE_MODULE_HEADERS ${ServiceModuleProtocolDirectory}/ServiceModule.proto)
@@ -51,8 +49,8 @@ add_dependencies(Module
 target_link_libraries(Module
         PUBLIC
     spdlog
-    mongocxx
-    bsoncxx
+    mongo::mongocxx_shared
+    mongo::bsoncxx_shared
     ${Boost_LIBRARIES}
     ${PROTOBUF_LIBRARY}
     nlohmann_json::nlohmann_json
@@ -62,7 +60,6 @@ target_include_directories(Module
         PRIVATE
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/Source>"
-    "$<BUILD_INTERFACE:${MongoCxxIncludes}>"
 )
 
 include(GNUInstallDirs)
