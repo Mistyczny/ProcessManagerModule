@@ -1,5 +1,3 @@
-project(CommunicationProtocols)
-
 include(ExternalProject)
 
 set(ArtifactoryProtocolsPath /process-manager-local/CommunicationProtocols)

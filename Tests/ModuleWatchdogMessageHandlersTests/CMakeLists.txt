@@ -1,5 +1,3 @@
-project(ModuleMessageHandlersTests)
-
 ########################################### ModuleResponseConnectHandler ###############################################
 set(ModuleResponseConnectHandlerSource  
     ${CMAKE_SOURCE_DIR}/Source/src//ModuleResponseConnectHandler.cpp

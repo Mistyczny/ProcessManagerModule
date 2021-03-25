@@ -1,5 +1,3 @@
-project(ModuleServerTest)
-
 set(ModuleServerSource
     ${CMAKE_SOURCE_DIR}/Source/src/ModuleServer.cpp
     ${CMAKE_SOURCE_DIR}/Source/src/Timer.cpp
