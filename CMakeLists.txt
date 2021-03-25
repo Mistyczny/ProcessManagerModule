@@ -27,8 +27,6 @@ set(ServiceModuleProtocolDirectory ${CMAKE_BINARY_DIR}/Protocols/service-module-
 
 set(artifactoryDownloader ${CMAKE_SOURCE_DIR}/Toolkits/artifactory_downloader.sh)
 
-set(MongoCxxIncludes /usr/local/include/mongocxx/v_noabi /usr/local/include/bsoncxx/v_noabi)
-
 configure_file(Doxyfile.in Doxyfile)
 
 add_subdirectory(Protocols)
