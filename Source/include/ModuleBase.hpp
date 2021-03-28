@@ -5,7 +5,6 @@
 #include "ModuleEventsCache.hpp"
 #include "ModuleRegistrationState.hpp"
 #include "ModuleServer.hpp"
-#include "ModuleSettings.hpp"
 #include "ModuleUserProcess.hpp"
 #include "ModuleWatchdogConnectionState.hpp"
 #include "TimersCache.hpp"

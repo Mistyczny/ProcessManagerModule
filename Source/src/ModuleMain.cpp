@@ -21,10 +21,7 @@ void validateOptions(int argc, char* argv[]) {
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, optionsDescription), variablesMap);
         boost::program_options::notify(variablesMap);
         if (variablesMap.contains("identifier")) {
-            std::cout << variablesMap["identifier"].as<uint32_t>() << std::endl;
             Module::Globals::moduleIdentifier = variablesMap["identifier"].as<uint32_t>();
-        } else {
-            std::cout << "THERE IS NO IDENTIFIER PROVIDED" << std::endl;
         }
     } catch (boost::program_options::error& ex) {
     }

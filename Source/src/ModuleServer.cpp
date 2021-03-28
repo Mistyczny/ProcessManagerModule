@@ -65,8 +65,6 @@ void Server::startReading() {
                 // Get local copy of message sender endpoint
                 boost::asio::ip::udp::endpoint senderEndpoint{remoteEndpoint};
 
-                std::cout << "RECEIVED MESSAGE OF LENGTH: " << bytesRead << std::endl;
-
                 // Starting listening for new incoming message
                 this->startReading();
 
@@ -321,7 +319,6 @@ bool Server::sendToDestination(const Destination& destination, std::shared_ptr<s
 }
 
 void Server::handleRequest(boost::asio::ip::udp::endpoint sender, ServiceModule::Message& requestMessage) {
-    std::cout << " RECEIVED REQUEST FROM OTHER" << std::endl;
     const ServiceModule::Header& header = requestMessage.header();
     const ServiceModule::Request& request = requestMessage.request();
     this->eventsCache.runRequestsHandlers(header.senderidentifier(), request);

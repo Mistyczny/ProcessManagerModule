@@ -4,14 +4,12 @@ protobuf_generate_cpp(PROTO_SERVICE_MODULE_SRC PROTO_SERVICE_MODULE_HEADERS ${Se
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleMain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleBase.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Event.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/TimersCache.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/TimersCache.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/TimersThreadMain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Timer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleTimersManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConnectionManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleSettings.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ApplicationDetails.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/ApplicationDetails.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleConnection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ModuleResponsePingHandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Types.cpp

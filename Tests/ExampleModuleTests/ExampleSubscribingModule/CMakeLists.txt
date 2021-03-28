@@ -4,7 +4,6 @@ protobuf_generate_cpp(PROTO_GPS_SRC PROTO_GPS_HEADERS
 
 set(SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/ModuleTwoTestTask.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/GpsMobilesMap.cpp
     ${PROTO_GPS_SRC}
     ${PROTO_GPS_HEADERS}
 )

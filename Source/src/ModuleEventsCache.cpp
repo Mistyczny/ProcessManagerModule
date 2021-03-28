@@ -12,10 +12,7 @@ void EventsCache::runRequestsHandlers(Types::ServiceIdentifier identifier, const
         auto range = eventsCache.equal_range(identifier);
         for (auto it = range.first; it != range.second; ++it) {
             if (it->second->validateMessage(request.request())) {
-                std::cout << "VALIDATED MESSAGE" << std::endl;
                 it->second->handleReceivedMessage(request.request());
-            } else {
-                std::cout << "INVALID MESSAGE" << std::endl;
             }
         }
     }
