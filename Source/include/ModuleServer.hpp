@@ -1,6 +1,7 @@
 #pragma once
 #include "MessageQueue.hpp"
 #include "ModuleConfiguration.hpp"
+#include "ModuleEventsCache.hpp"
 #include "ServiceModule.pb.h"
 #include "TimersCache.hpp"
 #include "Types.hpp"
@@ -34,7 +35,7 @@ protected:
     boost::asio::io_context& ioContext;
     std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>& servicesEndpointsMap;
     Internal::TimersCache& timersCache;
-
+    EventsCache& eventsCache;
     boost::asio::ip::udp::socket socket;
     std::vector<char> messageBuffer{};
     boost::asio::ip::udp::endpoint remoteEndpoint{};
@@ -53,13 +54,11 @@ protected:
     void processHandleReceiveError(const boost::system::error_code& error);
     void processSendError(const boost::system::error_code& error);
 
-    ServiceModule::Message makeRequestMessage(google::protobuf::Any*);
-
     void startTimerToResend(const Destination& destination, const ServiceModule::Message& request);
 
 public:
     explicit Server(boost::asio::io_context& ioContext, std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>&,
-                    Internal::TimersCache& timersCache);
+                    Internal::TimersCache& timersCache, EventsCache& eventsCache);
     virtual ~Server() = default;
 
     bool bindToListeningSocket();
@@ -67,6 +66,7 @@ public:
 
     bool sendRequest(uint32_t identifier, google::protobuf::Any* request);
     bool sendRequest(uint32_t identifier, ServiceModule::Message& request);
+    bool sendSubscribeRequest(uint32_t identifier, std::string);
 };
 
 } // namespace Module

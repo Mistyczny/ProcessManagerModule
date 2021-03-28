@@ -1,1 +1,2 @@
 add_subdirectory(ExampleModuleOne)
+add_subdirectory(ExampleSubscribingModule)

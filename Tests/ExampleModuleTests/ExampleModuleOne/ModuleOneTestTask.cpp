@@ -5,6 +5,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include "ModuleGlobals.hpp"
 
 /* Use this to initialize environment before running main loop */
 ModuleUserProcess::ModuleUserProcess() = default;
@@ -18,6 +19,7 @@ int ModuleUserProcess::main(int argc, char* argv[]) {
         GPS::CoordinatesUpdateRequest coordinatesUpdateRequest{};
         std::cout << "Sending X: " << newCoordinates << std::endl;
         std::cout << "Sending Y: " << newCoordinates << std::endl;
+        coordinatesUpdateRequest.set_identifier(Module::Globals::moduleIdentifier);
         coordinatesUpdateRequest.set_x(newCoordinates);
         coordinatesUpdateRequest.set_y(newCoordinates);
         auto* anyType = new google::protobuf::Any{};

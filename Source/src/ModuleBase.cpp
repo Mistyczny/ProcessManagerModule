@@ -1,5 +1,6 @@
 #include "ModuleBase.hpp"
 #include "ApplicationDetails.hpp"
+#include "EventManager.hpp"
 #include "Logging.hpp"
 #include "ModuleConfigurationReader.hpp"
 #include "ModuleConnection.hpp"
@@ -18,8 +19,9 @@ ModuleBase::ModuleBase(int argc, char* argv[])
                                                                           ioContext, watchdogConnectionState)},
       ioContextWorkThread{[](boost::asio::io_context& ioContext) { ioContext.run(); }, std::ref(ioContext)},
       watchdogConnectionWatcherThread{WatchdogConnectionWatcher(), this->connection, std::ref(watchdogConnectionState)} {
-    server = std::make_shared<Server>(ioContext, servicesEndpointsMap, timersCache);
+    server = std::make_shared<Server>(ioContext, servicesEndpointsMap, timersCache, eventsCache);
     Mongo::DbEnvironment::initialize();
+    EventManager::initialize(eventsCache);
 }
 
 ModuleBase::~ModuleBase() {

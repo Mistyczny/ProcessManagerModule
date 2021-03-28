@@ -1,10 +1,10 @@
 #include "EventManager.hpp"
 
-bool EventManager::initialize(std::multimap<uint32_t, std::unique_ptr<EventInterface>>& eventsMap) noexcept {
+bool EventManager::initialize(Module::EventsCache& eventsCache) noexcept {
     bool eventManagerInitialized{true};
     if (!eventManager) {
         try {
-            eventManager = new EventManager(eventsMap);
+            eventManager = new EventManager(eventsCache);
         } catch (std::bad_alloc& allocationError) {
             eventManagerInitialized = false;
         }
@@ -12,7 +12,7 @@ bool EventManager::initialize(std::multimap<uint32_t, std::unique_ptr<EventInter
     return eventManagerInitialized;
 }
 
-EventManager::EventManager(std::multimap<uint32_t, std::unique_ptr<EventInterface>>& eventsMap) : eventsMap{eventsMap} {}
+EventManager::EventManager(Module::EventsCache& eventsCache) : eventsCache{eventsCache} {}
 
 EventManager::~EventManager() {
     if (eventManager) {
@@ -21,7 +21,9 @@ EventManager::~EventManager() {
 }
 EventManager* EventManager::getEventManager() { return eventManager; }
 
-void EventManager::registerNewEventHandler(uint32_t key, std::unique_ptr<EventInterface> handler) {
-    auto eventManager = getEventManager();
-    eventManager->eventsMap.emplace(key, std::move(handler));
+void EventManager::registerNewEventHandler(Types::ServiceIdentifier identifier, std::unique_ptr<EventInterface> event) {
+    if (eventManager) {
+        std::cout << "EVENT ADDED" << std::endl;
+        eventManager->eventsCache.addEvent(identifier, std::move(event));
+    }
 }

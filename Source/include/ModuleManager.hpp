@@ -15,6 +15,7 @@ public:
     static bool initialize(std::shared_ptr<Server>);
 
     static bool sendRequest(Types::ServiceIdentifier identifier, google::protobuf::Any* request);
+    static bool sendSubscribeRequest(Types::ServiceIdentifier identifier, std::string messageType);
 };
 
 } // namespace Module

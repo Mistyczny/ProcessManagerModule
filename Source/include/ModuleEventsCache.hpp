@@ -1,19 +1,21 @@
 #pragma once
 #include "Event.hpp"
+#include "Types.hpp"
 #include <vector>
+#include "ServiceModule.pb.h"
 
 namespace Module {
 
-class ModuleEventsCache {
+class EventsCache {
 private:
-    std::vector<std::unique_ptr<Event>> events;
+    std::multimap<Types::ServiceIdentifier, std::unique_ptr<EventInterface>> eventsCache;
 
 public:
-    ModuleEventsCache() = default;
-    virtual ~ModuleEventsCache() = default;
+    EventsCache() = default;
+    virtual ~EventsCache() = default;
 
-    bool addEvent(std::unique_ptr<Event> newEvent);
-    bool removeEvent(std::string key);
+    void addEvent(Types::ServiceIdentifier, std::unique_ptr<EventInterface>);
+    void runRequestsHandlers(Types::ServiceIdentifier, const ServiceModule::Request& request);
 };
 
 } // namespace Module

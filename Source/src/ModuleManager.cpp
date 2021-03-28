@@ -1,5 +1,6 @@
 #include "ModuleManager.hpp"
 #include "Logging.hpp"
+#include "ServiceModule.pb.h"
 
 namespace Module {
 
@@ -28,6 +29,19 @@ bool Manager::sendRequest(Types::ServiceIdentifier identifier, google::protobuf:
     }
     Log::trace("Sending request to: " + std::to_string(identifier));
     return requestSend;
+}
+
+bool Manager::sendSubscribeRequest(Types::ServiceIdentifier identifier, std::string messageType) {
+    bool sendSubscribeRequest{false};
+    if (!instance) {
+        Log::error("Module::Manager was not initialized");
+    } else if (!instance->server) {
+        Log::error("Module::Manager server was not initialized");
+    } else {
+        sendSubscribeRequest = instance->server->sendSubscribeRequest(identifier, messageType);
+    }
+    Log::trace("Sending request to: " + std::to_string(identifier));
+    return sendSubscribeRequest;
 }
 
 } // namespace Module

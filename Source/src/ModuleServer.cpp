@@ -8,6 +8,7 @@
 #include "ModuleServer.hpp"
 #include "Logging.hpp"
 #include "ModuleGlobals.hpp"
+#include "ModuleMessageMakers.hpp"
 #include "MongoDbEnvironment.hpp"
 #include "MongoServicesCollection.hpp"
 #include "Timer.hpp"
@@ -18,8 +19,9 @@
 namespace Module {
 
 Server::Server(boost::asio::io_context& ioContext, std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>& servicesEndpointsMap,
-               Internal::TimersCache& timersCache)
-    : ioContext{ioContext}, servicesEndpointsMap{servicesEndpointsMap}, socket{ioContext}, timersCache{timersCache} {}
+               Internal::TimersCache& timersCache, EventsCache& eventsCache)
+    : ioContext{ioContext}, servicesEndpointsMap{servicesEndpointsMap}, socket{ioContext}, timersCache{timersCache}, eventsCache{
+                                                                                                                         eventsCache} {}
 
 bool Server::bindToListeningSocket() {
     bool socketBind{true};
@@ -63,6 +65,8 @@ void Server::startReading() {
                 // Get local copy of message sender endpoint
                 boost::asio::ip::udp::endpoint senderEndpoint{remoteEndpoint};
 
+                std::cout << "RECEIVED MESSAGE OF LENGTH: " << bytesRead << std::endl;
+
                 // Starting listening for new incoming message
                 this->startReading();
 
@@ -96,7 +100,8 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
         Destination destination{};
         destination.endpoint = endpoint->second;
         destination.serviceIdentifier = identifier;
-        auto destinationAndRequestPair = std::make_pair(destination, this->makeRequestMessage(anyRequest));
+        ServiceModule::Message message = MessageMakers::makeRequestMessage(anyRequest, this->generateTransactionCode());
+        auto destinationAndRequestPair = std::make_pair(destination, message);
         // Forward message to sending queue
         Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
                    std::to_string(destination.endpoint.port()));
@@ -123,7 +128,8 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
             destination.endpoint = serviceEndpoint;
             destination.serviceIdentifier = identifier;
 
-            auto destinationAndRequestPair = std::make_pair(destination, this->makeRequestMessage(anyRequest));
+            ServiceModule::Message message = MessageMakers::makeRequestMessage(anyRequest, this->generateTransactionCode());
+            auto destinationAndRequestPair = std::make_pair(destination, message);
             Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
                        std::to_string(destination.endpoint.port()));
             // Forward message to sending queue
@@ -195,19 +201,63 @@ bool Server::sendRequest(uint32_t identifier, ServiceModule::Message& request) {
     return sendRequest;
 }
 
-ServiceModule::Message Server::makeRequestMessage(google::protobuf::Any* anyRequest) {
-    auto* requestHeader = new ServiceModule::Header{};
-    requestHeader->set_senderidentifier(Module::Globals::moduleIdentifier);
-    requestHeader->set_operationcode(ServiceModule::OperationCode::ModuleRequest);
-    requestHeader->set_transactioncode(this->generateTransactionCode());
-    auto* moduleRequest = new ServiceModule::Request{};
-    moduleRequest->set_allocated_request(anyRequest);
-    ServiceModule::Message messageToSend{};
-    messageToSend.set_allocated_header(requestHeader);
-    messageToSend.set_allocated_request(moduleRequest);
-    std::cout << "HAS HEADER: " << messageToSend.has_header() << std::endl;
-    std::cout << "HAS REQUEST: " << messageToSend.has_request() << std::endl;
-    return messageToSend;
+bool Server::sendSubscribeRequest(uint32_t identifier, std::string subscribedType) {
+    Log::trace("Server::sendRequest - send enter");
+    bool sendRequest{};
+    auto endpoint = servicesEndpointsMap.find(identifier);
+    if (endpoint != std::end(servicesEndpointsMap)) {
+        Log::trace("Server::sendRequest - getting service from local cache");
+        Destination destination{};
+        destination.endpoint = endpoint->second;
+        destination.serviceIdentifier = identifier;
+        ServiceModule::Message message = MessageMakers::makeSubscriptionRequestMessage(subscribedType, this->generateTransactionCode());
+        auto destinationAndRequestPair = std::make_pair(destination, message);
+        // Forward message to sending queue
+        Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
+                   std::to_string(destination.endpoint.port()));
+        if (this->messageQueue.push(destinationAndRequestPair)) {
+            if (this->messageQueue.size() > 1) {
+                Log::trace("Server::startSending - Sending in progress");
+            } else {
+                this->send();
+                sendRequest = true;
+            }
+        } else {
+            Log::error("Server::sendRequest - Failed to push message into messages queue");
+        }
+    } else {
+        Log::trace("Server::sendRequest - getting service from database");
+        // Service was not found in the cache, lets get it from database
+        auto servicesCollectionEntry = Mongo::DbEnvironment::getInstance()->getClient();
+        Mongo::ServicesCollection services{*servicesCollectionEntry, "Services"};
+        auto destinationService = services.getService(identifier);
+        if (destinationService.has_value()) {
+            auto address = boost::asio::ip::address::from_string(destinationService->ipAddress);
+            boost::asio::ip::udp::endpoint serviceEndpoint{address, destinationService->port};
+            Destination destination{};
+            destination.endpoint = serviceEndpoint;
+            destination.serviceIdentifier = identifier;
+
+            ServiceModule::Message message = MessageMakers::makeSubscriptionRequestMessage(subscribedType, this->generateTransactionCode());
+            auto destinationAndRequestPair = std::make_pair(destination, message);
+            Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
+                       std::to_string(destination.endpoint.port()));
+            // Forward message to sending queue
+            if (this->messageQueue.push(destinationAndRequestPair)) {
+                if (this->messageQueue.size() > 1) {
+                    Log::trace("Server::startSending - Sending in progress");
+                } else {
+                    this->send();
+                    sendRequest = true;
+                }
+            } else {
+                Log::error("Server::sendRequest - Failed to push message into messages queue");
+            }
+        } else {
+            Log::trace("Server::sendRequest - service not found in database");
+        }
+    }
+    return sendRequest;
 }
 
 void Server::send() {
@@ -270,7 +320,12 @@ bool Server::sendToDestination(const Destination& destination, std::shared_ptr<s
     return sendToDestination;
 }
 
-void Server::handleRequest(boost::asio::ip::udp::endpoint, ServiceModule::Message& requestMessage) {}
+void Server::handleRequest(boost::asio::ip::udp::endpoint sender, ServiceModule::Message& requestMessage) {
+    std::cout << " RECEIVED REQUEST FROM OTHER" << std::endl;
+    const ServiceModule::Header& header = requestMessage.header();
+    const ServiceModule::Request& request = requestMessage.request();
+    this->eventsCache.runRequestsHandlers(header.senderidentifier(), request);
+}
 
 void Server::handleResponse(ServiceModule::Message& responseMessage) {
     if (!responseMessage.has_response()) {

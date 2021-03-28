@@ -2,6 +2,7 @@
 #include "Communication.hpp"
 #include "ModuleConfiguration.hpp"
 #include "ModuleConnection.hpp"
+#include "ModuleEventsCache.hpp"
 #include "ModuleRegistrationState.hpp"
 #include "ModuleServer.hpp"
 #include "ModuleSettings.hpp"
@@ -24,6 +25,7 @@ private:
     boost::asio::io_context ioContext;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> m_worker;
     Internal::TimersCache timersCache{};
+    EventsCache eventsCache{};
     std::shared_ptr<Server> server{nullptr};
     WatchdogConnectionState watchdogConnectionState;
     std::shared_ptr<ModuleWatchdogConnection> connection;
