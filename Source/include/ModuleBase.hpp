@@ -6,6 +6,7 @@
 #include "ModuleRegistrationState.hpp"
 #include "ModuleServer.hpp"
 #include "ModuleUserProcess.hpp"
+#include "TimersThreadMain.h"
 #include "ModuleWatchdogConnectionState.hpp"
 #include "TimersCache.hpp"
 #include "Types.hpp"
@@ -30,6 +31,7 @@ private:
     std::shared_ptr<ModuleWatchdogConnection> connection;
     std::thread ioContextWorkThread;
     std::thread watchdogConnectionWatcherThread;
+    std::thread timersThread{Internal::TimersThreadMain, std::ref(timersCache)};
     ModuleUserProcess userTask{};
 
 public:
@@ -44,6 +46,8 @@ public:
     bool configureModule();
 
     static void SIGINTSignalHandler(int);
+
+    void joinAll();
 };
 
 } // namespace Module

@@ -15,12 +15,19 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Kacper Waśniowski")
 set(CPACK_PACKAGE_CONTACT "Kacper Waśniowski")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "")
 
-find_package(Boost 1.71.0 COMPONENTS system filesystem log program_options REQUIRED)
-find_package(Protobuf 3.14 EXACT REQUIRED)
-find_package(mongocxx 3.6.1 REQUIRED)
-find_package(bsoncxx 3.6.1 REQUIRED)
-find_package(spdlog 1.8.2 EXACT REQUIRED)
-find_package(nlohmann_json 3.9.1 EXACT REQUIRED)
+set(BoostVersion 1.75.0)
+set(ProtobufVersion 3.15.6)
+set(MongocVersion 1.17.4)
+set(MongocxxVersion 3.6.1)
+set(SpdlogVersion 1.8.2)
+set(NlohmannVersion 3.9.1)
+
+find_package(Boost ${BoostVersion} COMPONENTS system filesystem log program_options REQUIRED)
+find_package(Protobuf ${ProtobufVersion} EXACT REQUIRED)
+find_package(mongocxx ${MongocxxVersion} REQUIRED)
+find_package(bsoncxx ${MongocxxVersion} REQUIRED)
+find_package(spdlog ${SpdlogVersion} EXACT REQUIRED)
+find_package(nlohmann_json ${NlohmannVersion} EXACT REQUIRED)
 
 set(WatchdogModuleProtocolDir ${CMAKE_BINARY_DIR}/Protocols/watchdog-module-protocol)
 set(ServiceModuleProtocolDirectory ${CMAKE_BINARY_DIR}/Protocols/service-module-protocol)
@@ -29,6 +36,7 @@ set(artifactoryDownloader ${CMAKE_SOURCE_DIR}/Toolkits/artifactory_downloader.sh
 
 configure_file(Doxyfile.in Doxyfile)
 
+add_subdirectory(Dockerfiles)
 add_subdirectory(Protocols)
 add_subdirectory(Source)
 if(${BUILD_TESTS})

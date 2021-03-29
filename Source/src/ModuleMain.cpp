@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
         Log::info("User program return code : " + std::to_string(userReturnCode));
         // User program left gracefully so send shutdown handler to prevent reconnecting
         moduleBase.moduleShutdownHandler();
+        moduleBase.joinAll();
     }
     return returnCode;
 }
