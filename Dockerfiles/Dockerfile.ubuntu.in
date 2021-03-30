@@ -21,8 +21,8 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir -p /root/boost \
     && cd /root/boost \
-    && wget https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz \
-    && tar -xzf boost_1_75_0.tar.gz --strip-components=1 \
+    && wget https://dl.bintray.com/boostorg/release/${BoostVersion}/source/boost_${BoostDownloadVersion}.tar.gz \
+    && tar -xzf boost_${BoostDownloadVersion}.tar.gz --strip-components=1 \
     && ./bootstrap.sh \
     && ./b2 install \
     && rm -rf /root/boost
