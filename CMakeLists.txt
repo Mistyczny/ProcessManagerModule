@@ -18,7 +18,7 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS "")
 set(BoostVersion 1.75.0)
 set(ProtobufVersion 3.15.6)
 set(MongocVersion 1.17.4)
-set(MongocxxVersion 3.6.1)
+set(MongocxxVersion 3.6.2)
 set(SpdlogVersion 1.8.2)
 set(NlohmannVersion 3.9.1)
 

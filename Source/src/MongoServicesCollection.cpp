@@ -32,17 +32,17 @@ std::optional<ServiceRecord> ServicesCollection::viewToServiceRecord(bsoncxx::do
     auto name = view["Name"];
     if (serviceIdentifier.type() != bsoncxx::type::k_int32) {
         Log::error("Failed to get module identifier");
-    } else if (ipAddress.type() != bsoncxx::type::k_string) {
+    } else if (ipAddress.type() != bsoncxx::type::k_utf8) {
         Log::error("Failed to get ip address");
     } else if (port.type() != bsoncxx::type::k_int32) {
         Log::error("Failed to get port");
-    } else if (name.type() != bsoncxx::type::k_string) {
+    } else if (name.type() != bsoncxx::type::k_utf8) {
         Log::error("Failed to get name");
     } else {
         serviceRecord = std::make_optional<ServiceRecord>();
         serviceRecord->identifier = serviceIdentifier.get_int32();
-        serviceRecord->ipAddress = ipAddress.get_string().value.to_string();
-        serviceRecord->name = name.get_string().value.to_string();
+        serviceRecord->ipAddress = ipAddress.get_utf8().value.to_string();
+        serviceRecord->name = name.get_utf8().value.to_string();
         serviceRecord->port = port.get_int32();
     }
     return serviceRecord;
