@@ -1,3 +1,4 @@
+#include "ModuleEventsCache.hpp"
 #include "ModuleServer.hpp"
 #include "MongoDbEnvironment.hpp"
 #include "MongoServicesCollection.hpp"
@@ -23,8 +24,8 @@ public:
 
     MockModuleServer(boost::asio::io_context& ioContext,
                      std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>& servicesEndpointsMap,
-                     Internal::TimersCache& timersCache)
-        : Module::Server(ioContext, servicesEndpointsMap, timersCache) {}
+                     Internal::TimersCache& timersCache, Module::EventsCache& eventsCache)
+        : Module::Server(ioContext, servicesEndpointsMap, timersCache, eventsCache) {}
 
     void sendToDestinationMock() { this->sendToDestination({}, {}); }
 };
@@ -78,7 +79,9 @@ TEST_CASE_METHOD(MongoDbConnection, "Testing module-service messaging functional
     boost::asio::io_context ioContext;
     std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint> servicesEndpointsMap;
     Internal::TimersCache timersCache;
-    std::shared_ptr<MockModuleServer> mockedModuleServer = std::make_shared<MockModuleServer>(ioContext, servicesEndpointsMap, timersCache);
+    Module::EventsCache eventsCache{};
+    std::shared_ptr<MockModuleServer> mockedModuleServer =
+        std::make_shared<MockModuleServer>(ioContext, servicesEndpointsMap, timersCache, eventsCache);
 
     ServiceModule::Message message{};
     auto* anyType = new google::protobuf::Any{};
