@@ -3,8 +3,8 @@
 #include "GpsCoordinatesCache.hpp"
 #include "ModuleManager.hpp"
 #include "ModuleUserProcess.hpp"
+#include <SFML/Graphics.hpp>
 #include <chrono>
-#include <iostream>
 #include <thread>
 
 class CoordinatesUpdateSubscriptionHandler {
@@ -12,8 +12,8 @@ private:
     GpsCoordinatesCache& gpsCoordinatesCache;
 
 public:
-    CoordinatesUpdateSubscriptionHandler(GpsCoordinatesCache& gpsCoordinatesCache) : gpsCoordinatesCache{gpsCoordinatesCache} {}
-    ~CoordinatesUpdateSubscriptionHandler() {}
+    explicit CoordinatesUpdateSubscriptionHandler(GpsCoordinatesCache& gpsCoordinatesCache) : gpsCoordinatesCache{gpsCoordinatesCache} {}
+    ~CoordinatesUpdateSubscriptionHandler() = default;
 
     bool validate(const google::protobuf::Any& any) { return any.Is<GPS::SubscribeIdentifierRequest>(); }
     void run(const google::protobuf::Any& any) {
@@ -24,7 +24,6 @@ public:
     }
 };
 
-/* Use this to initialize environment before running main loop */
 ModuleUserProcess::ModuleUserProcess() = default;
 
 ModuleUserProcess::~ModuleUserProcess() = default;
@@ -36,14 +35,20 @@ int ModuleUserProcess::main(int argc, char* argv[]) {
     auto coordinatesUpdateSubscriptionHandler = std::make_shared<CoordinatesUpdateSubscriptionHandler>(gpsCoordinatesCache);
     std::unique_ptr<EventInterface> newEvent =
         std::make_unique<MessageReceiveEvent<std::shared_ptr<CoordinatesUpdateSubscriptionHandler>>>(coordinatesUpdateSubscriptionHandler);
-    EventManager::registerNewEventHandler(872415233, std::move(newEvent));
+    EventManager::registerNewEventHandler(Types::toServiceIdentifier(1), std::move(newEvent));
+
     GPS::CoordinatesUpdateRequest coordinatesUpdateRequest{};
     Module::Manager::sendSubscribeRequest(Types::toServiceIdentifier(1), coordinatesUpdateRequest.GetTypeName());
 
     while (true) {
         std::system("clear");
+        std::cout.width(30);
+        std::cout << "GPS Command center" << std::endl;
+        std::cout.width(30);
+        std::cout << "------------------------------" << std::endl;
         gpsCoordinatesCache.print();
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::cout.width(30);
+        std::cout << "------------------------------" << std::endl;
     }
     return 0;
 }

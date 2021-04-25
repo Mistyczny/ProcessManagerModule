@@ -44,7 +44,7 @@ uint32_t TimersCache::internalRegisterTimer(std::unique_ptr<TimerInterface> newT
 
 // Register timer into cache
 uint32_t TimersCache::registerTimer(std::unique_ptr<TimerInterface> newTimer) {
-    uint32_t timerID = internalRegisterTimer(std::move(newTimer));
+    uint32_t timerID = this->internalRegisterTimer(std::move(newTimer));
     timersInvoked.notify_one();
     return timerID;
 }
@@ -106,7 +106,7 @@ void TimersCache::triggerExpiredTimers(std::chrono::high_resolution_clock::time_
     std::for_each(std::begin(timers), std::end(timers), [&](const auto& timer) {
         if (timer.second->getActionStatus() == ActionStatus::Waiting) {
             if (timer.second->getExpirationTimestamp() < timePoint) {
-                auto future = std::async(std::launch::async, [&]() { timer.second->runCallbackFunction(); });
+                timer.second->runCallbackFunction();
             }
         }
     });

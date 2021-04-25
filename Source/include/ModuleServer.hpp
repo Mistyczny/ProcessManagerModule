@@ -56,6 +56,7 @@ protected:
 
     void startTimerToResend(const Destination& destination, const ServiceModule::Message& request);
 
+    std::optional<Destination> getDestination(uint32_t identifier);
 public:
     explicit Server(boost::asio::io_context& ioContext, std::map<Types::ServiceIdentifier, boost::asio::ip::udp::endpoint>&,
                     Internal::TimersCache& timersCache, EventsCache& eventsCache);

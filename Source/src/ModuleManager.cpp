@@ -44,4 +44,30 @@ bool Manager::sendSubscribeRequest(Types::ServiceIdentifier identifier, std::str
     return sendSubscribeRequest;
 }
 
+bool Manager::sendRequest(std::string name, google::protobuf::Any* request) {
+    bool requestSend{false};
+    if (!instance) {
+        Log::error("Module::Manager was not initialized");
+    } else if (!instance->server) {
+        Log::error("Module::Manager server was not initialized");
+    } else {
+        Log::trace("We should send request to: " + name);
+    }
+    Log::trace("Sending request to: " + name);
+    return requestSend;
+}
+
+bool Manager::sendSubscribeRequest(std::string name, std::string messageType) {
+    bool sendSubscribeRequest{false};
+    if (!instance) {
+        Log::error("Module::Manager was not initialized");
+    } else if (!instance->server) {
+        Log::error("Module::Manager server was not initialized");
+    } else {
+        Log::trace("We should send request to: " + name);
+    }
+    Log::trace("Sending request to: " + name);
+    return sendSubscribeRequest;
+}
+
 } // namespace Module

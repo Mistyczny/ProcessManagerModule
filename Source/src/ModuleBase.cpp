@@ -105,7 +105,6 @@ bool ModuleBase::configureModule() {
 void ModuleBase::joinAll() {
     this->ioContextWorkThread.join();
     this->watchdogConnectionWatcherThread.join();
-    this->timersThread.join();
 }
 
 } // namespace Module

@@ -12,13 +12,21 @@ public:
     void print() {
         std::shared_lock lock{mutex};
         std::cout.width(10);
-        std::cout << " identifier"
-                  << "x"
-                  << "y" << std::endl;
+        std::cout << "Identifier";
+        std::cout.width(10);
+        std::cout << "X";
+        std::cout.width(10);
+        std::cout << "Y" << std::endl;
+
         std::for_each(std::begin(coordinatesCache), std::end(coordinatesCache), [](auto& coordinates) {
             const Types::ModuleIdentifier& identifier = coordinates.first;
             const auto& [x, y] = coordinates.second;
-            std::cout << identifier << "   " << x << "       " << y << std::endl;
+            std::cout.width(10);
+            std::cout << identifier;
+            std::cout.width(10);
+            std::cout << x;
+            std::cout.width(10);
+            std::cout << y << std::endl;
         });
     }
 

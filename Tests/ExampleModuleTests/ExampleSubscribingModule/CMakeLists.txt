@@ -8,11 +8,15 @@ set(SOURCE
     ${PROTO_GPS_HEADERS}
 )
 
+find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
+
 add_executable(ExampleModuleTwoTest ${SOURCE})
 target_link_libraries(ExampleModuleTwoTest
         PUBLIC
     pthread
     Module
+    sfml-graphics
+    sfml-audio
 )
 
 target_include_directories(ExampleModuleTwoTest

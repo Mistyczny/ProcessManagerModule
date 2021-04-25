@@ -105,7 +105,7 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
                    std::to_string(destination.endpoint.port()));
         if (this->messageQueue.push(destinationAndRequestPair)) {
             if (this->messageQueue.size() > 1) {
-                Log::trace("Server::startSending - Sending in progress");
+                Log::info("Server::startSending - Sending in progress, count: " + std::to_string(this->messageQueue.size()));
             } else {
                 this->send();
                 sendRequest = true;
@@ -133,7 +133,7 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
             // Forward message to sending queue
             if (this->messageQueue.push(destinationAndRequestPair)) {
                 if (this->messageQueue.size() > 1) {
-                    Log::trace("Server::startSending - Sending in progress");
+                    Log::info("Server::startSending - Sending in progress, count: " + std::to_string(this->messageQueue.size()));
                 } else {
                     this->send();
                     sendRequest = true;
@@ -148,19 +148,37 @@ bool Server::sendRequest(uint32_t identifier, google::protobuf::Any* anyRequest)
     return sendRequest;
 }
 
-bool Server::sendRequest(uint32_t identifier, ServiceModule::Message& request) {
-    bool sendRequest{};
+std::optional<Destination> Server::getDestination(uint32_t identifier) {
+    std::optional<Destination> destination{std::nullopt};
     auto endpoint = servicesEndpointsMap.find(identifier);
     if (endpoint != std::end(servicesEndpointsMap)) {
-        Destination destination{};
-        destination.endpoint = endpoint->second;
-        destination.serviceIdentifier = identifier;
-        auto destinationAndRequestPair = std::make_pair(destination, request);
+        destination = Destination{};
+        destination->endpoint = endpoint->second;
+        destination->serviceIdentifier = identifier;
+    } else {
+        auto servicesCollectionEntry = Mongo::DbEnvironment::getInstance()->getClient();
+        Mongo::ServicesCollection services{*servicesCollectionEntry, "Services"};
+        auto destinationService = services.getService(identifier);
+        if (destinationService.has_value()) {
+            auto address = boost::asio::ip::address::from_string(destinationService->ipAddress);
+            boost::asio::ip::udp::endpoint serviceEndpoint{address, destinationService->port};
+            destination = Destination{};
+            destination->endpoint = serviceEndpoint;
+            destination->serviceIdentifier = identifier;
 
-        // Forward message to sending queue
+            servicesEndpointsMap.emplace(identifier, serviceEndpoint);
+        }
+    }
+    return destination;
+}
+bool Server::sendRequest(uint32_t identifier, ServiceModule::Message& request) {
+    bool sendRequest{};
+    std::optional<Destination> destination = this->getDestination(identifier);
+    if (destination.has_value()) {
+        auto destinationAndRequestPair = std::make_pair(*destination, request);
         if (this->messageQueue.push(destinationAndRequestPair)) {
             if (this->messageQueue.size() > 1) {
-                Log::trace("Server::startSending - Sending in progress");
+                Log::info("Server::sendRequest - Sending in progress, count: " + std::to_string(this->messageQueue.size()));
             } else {
                 sendRequest = true;
                 this->send();
@@ -169,90 +187,30 @@ bool Server::sendRequest(uint32_t identifier, ServiceModule::Message& request) {
             Log::error("Server::sendRequest - Failed to push message into messages queue");
         }
     } else {
-        Log::trace("Server::sendRequest - getting service from database");
-        // Service was not found in the cache, lets get it from database
-        auto servicesCollectionEntry = Mongo::DbEnvironment::getInstance()->getClient();
-        Mongo::ServicesCollection services{*servicesCollectionEntry, "Services"};
-        auto destinationService = services.getService(identifier);
-        if (destinationService.has_value()) {
-            auto address = boost::asio::ip::address::from_string(destinationService->ipAddress);
-            boost::asio::ip::udp::endpoint serviceEndpoint{address, destinationService->port};
-            Destination destination{};
-            destination.endpoint = serviceEndpoint;
-            destination.serviceIdentifier = identifier;
-
-            auto destinationAndRequestPair = std::make_pair(destination, request);
-
-            // Forward message to sending queue
-            if (this->messageQueue.push(destinationAndRequestPair)) {
-                if (this->messageQueue.size() > 1) {
-                    Log::trace("Server::startSending - Sending in progress");
-                } else {
-                    sendRequest = true;
-                    this->send();
-                }
-            } else {
-                Log::error("Server::sendRequest - Failed to push message into messages queue");
-            }
-        }
+        Log::error("Server::sendRequest - Failed to find destination address");
     }
+
     return sendRequest;
 }
 
 bool Server::sendSubscribeRequest(uint32_t identifier, std::string subscribedType) {
-    Log::trace("Server::sendRequest - send enter");
     bool sendRequest{};
-    auto endpoint = servicesEndpointsMap.find(identifier);
-    if (endpoint != std::end(servicesEndpointsMap)) {
-        Log::trace("Server::sendRequest - getting service from local cache");
-        Destination destination{};
-        destination.endpoint = endpoint->second;
-        destination.serviceIdentifier = identifier;
+    std::optional<Destination> destination = this->getDestination(identifier);
+
+    if (destination.has_value()) {
         ServiceModule::Message message = MessageMakers::makeSubscriptionRequestMessage(subscribedType, this->generateTransactionCode());
-        auto destinationAndRequestPair = std::make_pair(destination, message);
+        auto destinationAndRequestPair = std::make_pair(*destination, message);
+
         // Forward message to sending queue
-        Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
-                   std::to_string(destination.endpoint.port()));
         if (this->messageQueue.push(destinationAndRequestPair)) {
             if (this->messageQueue.size() > 1) {
-                Log::trace("Server::startSending - Sending in progress");
+                Log::info("Server::sendSubscribeRequest - Sending in progress, count: " + std::to_string(this->messageQueue.size()));
             } else {
                 this->send();
                 sendRequest = true;
             }
         } else {
             Log::error("Server::sendRequest - Failed to push message into messages queue");
-        }
-    } else {
-        Log::trace("Server::sendRequest - getting service from database");
-        // Service was not found in the cache, lets get it from database
-        auto servicesCollectionEntry = Mongo::DbEnvironment::getInstance()->getClient();
-        Mongo::ServicesCollection services{*servicesCollectionEntry, "Services"};
-        auto destinationService = services.getService(identifier);
-        if (destinationService.has_value()) {
-            auto address = boost::asio::ip::address::from_string(destinationService->ipAddress);
-            boost::asio::ip::udp::endpoint serviceEndpoint{address, destinationService->port};
-            Destination destination{};
-            destination.endpoint = serviceEndpoint;
-            destination.serviceIdentifier = identifier;
-
-            ServiceModule::Message message = MessageMakers::makeSubscriptionRequestMessage(subscribedType, this->generateTransactionCode());
-            auto destinationAndRequestPair = std::make_pair(destination, message);
-            Log::trace("Server::sendRequest - sending message to: " + destination.endpoint.address().to_string() + "/" +
-                       std::to_string(destination.endpoint.port()));
-            // Forward message to sending queue
-            if (this->messageQueue.push(destinationAndRequestPair)) {
-                if (this->messageQueue.size() > 1) {
-                    Log::trace("Server::startSending - Sending in progress");
-                } else {
-                    this->send();
-                    sendRequest = true;
-                }
-            } else {
-                Log::error("Server::sendRequest - Failed to push message into messages queue");
-            }
-        } else {
-            Log::trace("Server::sendRequest - service not found in database");
         }
     }
     return sendRequest;
